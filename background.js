@@ -13,7 +13,9 @@ import {
   loadState,
   clearState,
   getSettings,
-  addToHistory
+  addToHistory,
+  filterNewPins,
+  markPinsAsDownloaded
 } from './utils/storage.js';
 
 // ============================================
@@ -231,11 +233,24 @@ async function handleStartExport(message) {
   const settings = await getSettings();
 
   try {
+    // Filter out already downloaded pins
+    const { newPins, skippedCount } = await filterNewPins(pins);
+
+    console.log(`[Background] ${newPins.length} new pins, ${skippedCount} already downloaded`);
+
+    if (newPins.length === 0) {
+      return {
+        success: true,
+        results: { success: 0, failed: 0, skipped: skippedCount },
+        message: `All ${skippedCount} pins already downloaded`
+      };
+    }
+
     // Create board index first
     await createBoardIndex(boardName, pins, settings.vaultPath);
 
-    // Start batch download
-    const results = await batchDownload(pins, {
+    // Start batch download with only new pins
+    const results = await batchDownload(newPins, {
       vaultPath: settings.vaultPath,
       boardName,
       concurrency: settings.concurrency,
@@ -249,6 +264,12 @@ async function handleStartExport(message) {
       }
     });
 
+    // Mark successfully downloaded pins
+    const successfulPinIds = newPins
+      .filter(p => !results.failedPins.includes(p.id))
+      .map(p => p.id);
+    await markPinsAsDownloaded(successfulPinIds);
+
     // Clear state on success
     await clearState();
 
@@ -257,12 +278,13 @@ async function handleStartExport(message) {
       boardName,
       pinCount: pins.length,
       successCount: results.success,
-      failedCount: results.failed
+      failedCount: results.failed,
+      skippedCount
     });
 
     return {
       success: true,
-      results
+      results: { ...results, skipped: skippedCount }
     };
 
   } catch (error) {

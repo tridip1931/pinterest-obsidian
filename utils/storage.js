@@ -7,14 +7,15 @@
 const STORAGE_KEYS = {
   EXPORT_STATE: 'exportState',
   SETTINGS: 'settings',
-  EXPORT_HISTORY: 'exportHistory'
+  EXPORT_HISTORY: 'exportHistory',
+  DOWNLOADED_PINS: 'downloadedPins'  // Track already downloaded pin IDs
 };
 
 /**
  * Default settings
  */
 const DEFAULT_SETTINGS = {
-  vaultPath: '',
+  vaultPath: '/Users/tridipthrizu/Library/Mobile Documents/iCloud~md~obsidian/Documents/The Second Brain',
   resolution: 'originals',  // 'originals', '1200x', '736x'
   concurrency: 3,
   delay: 500,  // ms between batches
@@ -144,4 +145,61 @@ export async function getHistory() {
  */
 export async function clearHistory() {
   await chrome.storage.local.remove(STORAGE_KEYS.EXPORT_HISTORY);
+}
+
+// ============================================
+// Downloaded Pins Tracking
+// ============================================
+
+/**
+ * Get set of already downloaded pin IDs
+ * @returns {Promise<Set<string>>} - Set of pin IDs
+ */
+export async function getDownloadedPins() {
+  const result = await chrome.storage.local.get(STORAGE_KEYS.DOWNLOADED_PINS);
+  const pins = result[STORAGE_KEYS.DOWNLOADED_PINS] || [];
+  return new Set(pins);
+}
+
+/**
+ * Mark pins as downloaded
+ * @param {string[]} pinIds - Array of pin IDs to mark as downloaded
+ */
+export async function markPinsAsDownloaded(pinIds) {
+  const existing = await getDownloadedPins();
+  pinIds.forEach(id => existing.add(id));
+
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.DOWNLOADED_PINS]: Array.from(existing)
+  });
+}
+
+/**
+ * Filter out already downloaded pins
+ * @param {Object[]} pins - Array of pin objects
+ * @returns {Promise<{newPins: Object[], skippedCount: number}>}
+ */
+export async function filterNewPins(pins) {
+  const downloaded = await getDownloadedPins();
+  const newPins = pins.filter(pin => !downloaded.has(pin.id));
+  return {
+    newPins,
+    skippedCount: pins.length - newPins.length
+  };
+}
+
+/**
+ * Clear downloaded pins tracking (reset)
+ */
+export async function clearDownloadedPins() {
+  await chrome.storage.local.remove(STORAGE_KEYS.DOWNLOADED_PINS);
+}
+
+/**
+ * Get count of downloaded pins
+ * @returns {Promise<number>}
+ */
+export async function getDownloadedPinsCount() {
+  const downloaded = await getDownloadedPins();
+  return downloaded.size;
 }

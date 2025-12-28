@@ -238,8 +238,9 @@ async function handleExport() {
     });
 
     if (exportResponse.success) {
-      const { results } = exportResponse;
-      alert(`Export complete!\n✓ ${results.success} pins\n✗ ${results.failed} failed`);
+      const { results, message } = exportResponse;
+      const skippedText = results.skipped > 0 ? `\n⏭ ${results.skipped} already downloaded` : '';
+      alert(message || `Export complete!\n✓ ${results.success} new pins\n✗ ${results.failed} failed${skippedText}`);
       await loadHistory();
     } else {
       throw new Error(exportResponse.error);
