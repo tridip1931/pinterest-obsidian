@@ -63,7 +63,6 @@ function getImageExtension(url) {
  */
 async function batchDownload(pins, options = {}) {
   const {
-    vaultPath = '',
     boardName = 'Uncategorized',
     concurrency = 3,
     delay = 500,
@@ -77,9 +76,8 @@ async function batchDownload(pins, options = {}) {
     failedPins: []
   };
 
-  const basePath = vaultPath
-    ? `${vaultPath}/06-Vaults/Media/Pinterest`
-    : 'Pinterest-Export';
+  // Chrome downloads API only accepts relative paths within Downloads folder
+  const basePath = 'Pinterest-Export';
 
   // Process in batches
   for (let i = 0; i < pins.length; i += concurrency) {
@@ -153,12 +151,10 @@ async function batchDownload(pins, options = {}) {
  * Create board index file
  * @param {string} boardName - Board name
  * @param {Object[]} pins - Array of pins
- * @param {string} vaultPath - Vault base path
  */
-async function createBoardIndex(boardName, pins, vaultPath) {
-  const basePath = vaultPath
-    ? `${vaultPath}/06-Vaults/Media/Pinterest`
-    : 'Pinterest-Export';
+async function createBoardIndex(boardName, pins) {
+  // Chrome downloads API only accepts relative paths within Downloads folder
+  const basePath = 'Pinterest-Export';
 
   const markdown = generateBoardIndexMarkdown(boardName, pins);
   const url = 'data:text/markdown;base64,' + btoa(unescape(encodeURIComponent(markdown)));
@@ -247,11 +243,10 @@ async function handleStartExport(message) {
     }
 
     // Create board index first
-    await createBoardIndex(boardName, pins, settings.vaultPath);
+    await createBoardIndex(boardName, pins);
 
     // Start batch download with only new pins
     const results = await batchDownload(newPins, {
-      vaultPath: settings.vaultPath,
       boardName,
       concurrency: settings.concurrency,
       delay: settings.delay,

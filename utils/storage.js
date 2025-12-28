@@ -15,7 +15,7 @@ const STORAGE_KEYS = {
  * Default settings
  */
 const DEFAULT_SETTINGS = {
-  vaultPath: '/Users/tridipthrizu/Library/Mobile Documents/iCloud~md~obsidian/Documents/The Second Brain',
+  vaultPath: '',  // Empty = downloads to ~/Downloads/Pinterest-Export/
   resolution: 'originals',  // 'originals', '1200x', '736x'
   concurrency: 3,
   delay: 500,  // ms between batches
