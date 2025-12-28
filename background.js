@@ -31,6 +31,18 @@ function getImageUrl(thumbnailUrl, resolution = 'originals') {
   return thumbnailUrl.replace(/\/\d+x\//, `/${resolution}/`);
 }
 
+/**
+ * Extract file extension from Pinterest image URL
+ * @param {string} url - Pinterest image URL
+ * @returns {string} - Extension (jpg, png, gif, webp)
+ */
+function getImageExtension(url) {
+  const match = url.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+  const ext = match ? match[1].toLowerCase() : 'jpg';
+  // Only allow known image extensions
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
+}
+
 // ============================================
 // Download Queue with Rate Limiting
 // ============================================
@@ -75,7 +87,8 @@ async function batchDownload(pins, options = {}) {
       try {
         // Download image
         const imageUrl = getImageUrl(pin.thumbnailUrl, resolution);
-        const imageFilename = `${generatePinFilename(pin.title, pin.id)}.jpg`;
+        const imageExt = getImageExtension(pin.thumbnailUrl);
+        const imageFilename = `${generatePinFilename(pin.title, pin.id)}.${imageExt}`;
 
         await chrome.downloads.download({
           url: imageUrl,
@@ -84,20 +97,17 @@ async function batchDownload(pins, options = {}) {
         });
 
         // Generate and save markdown
-        const markdown = generatePinMarkdown(pin, { boardName });
+        const markdown = generatePinMarkdown(pin, { boardName, imageExtension: imageExt });
         const mdFilename = `${generatePinFilename(pin.title, pin.id)}.md`;
 
-        // Create markdown file via download (workaround for file creation)
-        const mdBlob = new Blob([markdown], { type: 'text/markdown' });
-        const mdUrl = URL.createObjectURL(mdBlob);
+        // Create markdown file via data URL (service workers don't support createObjectURL)
+        const mdUrl = 'data:text/markdown;base64,' + btoa(unescape(encodeURIComponent(markdown)));
 
         await chrome.downloads.download({
           url: mdUrl,
           filename: `${basePath}/pins/${mdFilename}`,
           conflictAction: 'uniquify'
         });
-
-        URL.revokeObjectURL(mdUrl);
         results.success++;
 
       } catch (error) {
@@ -149,16 +159,19 @@ async function createBoardIndex(boardName, pins, vaultPath) {
     : 'Pinterest-Export';
 
   const markdown = generateBoardIndexMarkdown(boardName, pins);
-  const blob = new Blob([markdown], { type: 'text/markdown' });
-  const url = URL.createObjectURL(blob);
+  const url = 'data:text/markdown;base64,' + btoa(unescape(encodeURIComponent(markdown)));
+
+  // Sanitize board name for filename
+  const safeFilename = (boardName || 'board')
+    .replace(/[<>:"/\\|?*]/g, '')
+    .replace(/\s+/g, '-')
+    .substring(0, 100);
 
   await chrome.downloads.download({
     url,
-    filename: `${basePath}/boards/${boardName}.md`,
+    filename: `${basePath}/boards/${safeFilename}.md`,
     conflictAction: 'overwrite'
   });
-
-  URL.revokeObjectURL(url);
 }
 
 // ============================================

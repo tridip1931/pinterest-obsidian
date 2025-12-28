@@ -16,6 +16,7 @@ import { generatePinFilename } from './sanitize.js';
  * @param {string} pin.author - Pin author/pinner username
  * @param {Object} options - Export options
  * @param {string} options.boardName - Name of the Pinterest board
+ * @param {string} options.imageExtension - Image file extension (jpg, png, gif, webp)
  * @param {string[]} options.tags - Additional tags to include
  * @param {string[]} options.pillars - PPV pillars (Career, Lifestyle, etc.)
  * @returns {string} - Complete markdown content with frontmatter
@@ -23,12 +24,13 @@ import { generatePinFilename } from './sanitize.js';
 export function generatePinMarkdown(pin, options = {}) {
   const {
     boardName = 'Uncategorized',
+    imageExtension = 'jpg',
     tags = [],
     pillars = []
   } = options;
 
   const filename = generatePinFilename(pin.title, pin.id);
-  const imageFilename = `${filename}.jpg`;
+  const imageFilename = `${filename}.${imageExtension}`;
   const today = new Date().toISOString().split('T')[0];
 
   // Build frontmatter
