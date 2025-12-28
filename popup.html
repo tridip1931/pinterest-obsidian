@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinterest to Obsidian</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>Pinterest → Obsidian</h1>
+    </header>
+
+    <!-- Page Status -->
+    <section id="page-status" class="section">
+      <div class="status-row">
+        <span class="label">Page:</span>
+        <span id="page-type" class="value">Detecting...</span>
+      </div>
+      <div class="status-row" id="board-info" style="display: none;">
+        <span class="label">Board:</span>
+        <span id="board-name" class="value">-</span>
+      </div>
+      <div class="status-row">
+        <span class="label">Visible Pins:</span>
+        <span id="pin-count" class="value">0</span>
+      </div>
+    </section>
+
+    <!-- Not on Board Warning -->
+    <section id="not-board-warning" class="section warning" style="display: none;">
+      <p>Navigate to a Pinterest board to export pins.</p>
+    </section>
+
+    <!-- Export Options -->
+    <section id="export-options" class="section" style="display: none;">
+      <h2>Export Options</h2>
+
+      <div class="option-group">
+        <label for="resolution">Image Resolution:</label>
+        <select id="resolution">
+          <option value="originals">Original (Best Quality)</option>
+          <option value="1200x">1200px</option>
+          <option value="736x">736px (Smaller)</option>
+        </select>
+      </div>
+
+      <div class="option-group">
+        <label>
+          <input type="checkbox" id="auto-scroll" checked>
+          Scroll to load all pins
+        </label>
+      </div>
+
+      <div class="option-group" id="scroll-options">
+        <label for="max-scrolls">Max scrolls:</label>
+        <input type="number" id="max-scrolls" value="50" min="1" max="200">
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings-section" class="section collapsed">
+      <h2 class="collapsible" data-target="settings-content">
+        <span class="toggle-icon">▶</span> Settings
+      </h2>
+      <div id="settings-content" class="collapsible-content">
+        <div class="option-group">
+          <label for="vault-path">Vault Path:</label>
+          <input type="text" id="vault-path" placeholder="/path/to/vault">
+          <small>Leave empty for default download location</small>
+        </div>
+        <div class="option-group">
+          <label for="concurrency">Concurrent Downloads:</label>
+          <input type="number" id="concurrency" value="3" min="1" max="10">
+        </div>
+        <div class="option-group">
+          <label for="delay">Delay Between Batches (ms):</label>
+          <input type="number" id="delay" value="500" min="0" max="5000" step="100">
+        </div>
+        <button id="save-settings" class="btn btn-secondary">Save Settings</button>
+      </div>
+    </section>
+
+    <!-- Progress Section -->
+    <section id="progress-section" class="section" style="display: none;">
+      <h2>Export Progress</h2>
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <div class="progress-stats">
+        <span id="progress-text">0 / 0</span>
+        <span id="progress-percent">0%</span>
+      </div>
+      <div class="progress-details">
+        <span class="success">✓ <span id="success-count">0</span></span>
+        <span class="failed">✗ <span id="failed-count">0</span></span>
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="actions">
+      <button id="extract-btn" class="btn btn-secondary" style="display: none;">
+        Extract Pins Only
+      </button>
+      <button id="export-btn" class="btn btn-primary" disabled>
+        Export to Obsidian
+      </button>
+      <button id="cancel-btn" class="btn btn-danger" style="display: none;">
+        Cancel
+      </button>
+    </section>
+
+    <!-- History -->
+    <section id="history-section" class="section collapsed">
+      <h2 class="collapsible" data-target="history-content">
+        <span class="toggle-icon">▶</span> Export History
+      </h2>
+      <div id="history-content" class="collapsible-content">
+        <ul id="history-list" class="history-list">
+          <li class="empty">No exports yet</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <small>v1.0.0 • PPV-aligned export</small>
+    </footer>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

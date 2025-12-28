@@ -1,0 +1,148 @@
+# Cursor Rules — Pinterest-to-Obsidian Chrome Extension
+
+## Project Context
+
+Chrome Manifest V3 extension. Vanilla JavaScript, no build step, ES modules. Exports Pinterest boards to Obsidian markdown with images.
+
+## Tech Stack
+
+- Chrome Extension MV3 (service workers)
+- Vanilla JS with ES modules
+- Chrome APIs: storage, downloads, scripting, tabs, runtime
+- No npm, no bundler, no framework
+
+## Architecture
+
+```
+content.js (Pinterest DOM) → background.js (service worker) → downloads
+                                    ↑
+                               popup.js (UI)
+```
+
+## Critical Rules
+
+### 1. Service Worker Constraints
+
+Service workers terminate after ~30s. NEVER store state in memory:
+
+```javascript
+// ❌ WRONG - state lost on termination
+let exportState = { pins: [] };
+
+// ✅ CORRECT - persist to storage
+await chrome.storage.local.set({ exportState: { pins: [] } });
+```
+
+### 2. Async Message Handlers
+
+ALWAYS return true for async responses:
+
+```javascript
+// ❌ WRONG - response never sent
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  fetchData().then(sendResponse);
+});
+
+// ✅ CORRECT
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  fetchData().then(sendResponse);
+  return true; // Keep channel open
+});
+```
+
+### 3. Content Script Isolation
+
+Content scripts run in Pinterest's context. They CANNOT:
+- Import ES modules (must be self-contained)
+- Access chrome.downloads directly
+- Fetch cross-origin images
+
+Send data to background script instead:
+```javascript
+chrome.runtime.sendMessage({ action: 'download', url: imageUrl });
+```
+
+### 4. No Build Step
+
+Files load directly. When editing:
+- Use relative imports: `import { fn } from './utils/file.js'`
+- Include .js extension in imports
+- Test by refreshing extension in chrome://extensions/
+
+## Code Patterns
+
+### Message Actions
+```javascript
+// Use verb-noun pattern
+{ action: 'extractPins' }
+{ action: 'startExport', pins, boardName }
+{ action: 'downloadProgress', current, total }
+```
+
+### Logging
+```javascript
+console.log('[Background] ...'); // Service worker
+console.log('[Content] ...');    // Content script
+console.log('[Popup] ...');      // Popup script
+```
+
+### Error Handling
+```javascript
+try {
+  await chrome.downloads.download({ url, filename });
+} catch (error) {
+  console.error('[Background] Download failed:', error);
+  // Handle gracefully, don't crash
+}
+```
+
+## Pinterest DOM Selectors
+
+```javascript
+// These may change - Pinterest updates frequently
+'[data-test-id="pinWrapper"]'  // Pin container
+'a[href*="/pin/"]'             // Pin link
+'img'                          // Inside wrapper
+
+// Image resolution upgrade
+url.replace(/\/\d+x\//, '/originals/')
+```
+
+## File Responsibilities
+
+| File | Purpose | Can Import Modules |
+|------|---------|-------------------|
+| background.js | Downloads, storage, coordination | Yes |
+| content.js | DOM extraction, scroll | No |
+| popup.js | UI logic, settings | Yes |
+| utils/*.js | Shared utilities | Yes |
+
+## Testing
+
+1. `chrome://extensions/` → Load unpacked
+2. Navigate to Pinterest board
+3. Click extension icon
+4. Refresh extension after code changes
+
+## Common Pitfalls
+
+| Issue | Solution |
+|-------|----------|
+| "Cannot use import" in content.js | Move logic to background.js or inline |
+| Message response undefined | Add `return true` in listener |
+| State lost between actions | Use chrome.storage.local |
+| Images fail to download | Use chrome.downloads, not fetch |
+
+## Obsidian Output
+
+Frontmatter must be valid YAML:
+```yaml
+---
+type: pinterest
+title: "Title with: colons quoted"
+board: "[[Board Name]]"
+image: "[[filename.jpg]]"
+---
+```
+
+Quote strings with special characters: `:`, `#`, `[`, `]`, `'`, `"`
