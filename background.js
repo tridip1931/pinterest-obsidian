@@ -89,29 +89,35 @@ async function batchDownload(pins, options = {}) {
         const imageUrl = getImageUrl(pin.thumbnailUrl, resolution);
         const imageExt = getImageExtension(pin.thumbnailUrl);
         const imageFilename = `${generatePinFilename(pin.title, pin.id)}.${imageExt}`;
+        const imagePath = `${basePath}/assets/${imageFilename}`;
+
+        console.log(`[Background] Downloading image: ${imagePath}`);
 
         await chrome.downloads.download({
           url: imageUrl,
-          filename: `${basePath}/assets/${imageFilename}`,
+          filename: imagePath,
           conflictAction: 'uniquify'
         });
 
         // Generate and save markdown
         const markdown = generatePinMarkdown(pin, { boardName, imageExtension: imageExt });
         const mdFilename = `${generatePinFilename(pin.title, pin.id)}.md`;
+        const mdPath = `${basePath}/pins/${mdFilename}`;
+
+        console.log(`[Background] Saving markdown: ${mdPath}`);
 
         // Create markdown file via data URL (service workers don't support createObjectURL)
         const mdUrl = 'data:text/markdown;base64,' + btoa(unescape(encodeURIComponent(markdown)));
 
         await chrome.downloads.download({
           url: mdUrl,
-          filename: `${basePath}/pins/${mdFilename}`,
+          filename: mdPath,
           conflictAction: 'uniquify'
         });
         results.success++;
 
       } catch (error) {
-        console.error(`Failed to download pin ${pin.id}:`, error);
+        console.error(`[Background] Failed to download pin ${pin.id}:`, error.message, error);
         results.failed++;
         results.failedPins.push(pin.id);
       }

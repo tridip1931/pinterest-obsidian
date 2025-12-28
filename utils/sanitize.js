@@ -11,11 +11,14 @@
 export function sanitize(title) {
   return (title || 'untitled')
     .toLowerCase()
-    .replace(/[*"\/\\<>:|?#\[\]^]/g, '')  // Remove filesystem-unsafe chars
-    .replace(/\s+/g, '-')                   // Spaces to hyphens
-    .replace(/-+/g, '-')                    // Collapse multiple hyphens
-    .replace(/^-|-$/g, '')                  // Trim leading/trailing hyphens
-    .substring(0, 100);                     // Limit length
+    .normalize('NFD')                        // Decompose accented characters
+    .replace(/[\u0300-\u036f]/g, '')         // Remove diacritics
+    .replace(/[^a-z0-9\s-]/g, '')            // Keep only alphanumeric, spaces, hyphens
+    .replace(/\s+/g, '-')                    // Spaces to hyphens
+    .replace(/-+/g, '-')                     // Collapse multiple hyphens
+    .replace(/^-|-$/g, '')                   // Trim leading/trailing hyphens
+    .substring(0, 80)                        // Shorter limit for safety
+    || 'untitled';                           // Fallback if empty
 }
 
 /**
